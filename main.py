@@ -48,10 +48,10 @@ def render_page(selected):
             default_index=0,
             orientation="horizontal",
         )
-        if selected == "Scan":
-            scanning_page() # Calling Scanning Page 
-        elif selected == "Search":
-            scanning_page() # Calling Search Page
+        # if selected == "Scan":
+        #     scanning_page() # Calling Scanning Page 
+        # elif selected == "Search":
+        #     scanning_page() # Calling Search Page
 
     elif selected == "Management":
         st.title("Management Page")
