@@ -1,6 +1,8 @@
 pandas
 streamlit
 opencv-python
+matplotlib
+streamlit-option-menu
 numpy
 pillow
 streamlit-webrtc
