@@ -1,11 +1,12 @@
+cv2
 pandas
 streamlit
 opencv-python
 matplotlib
-streamlit-option-menu
 numpy
 pillow
 streamlit-webrtc
+streamlit-option-menu
 
 # Download the Program Requirements File by
 # Copy and Paste the Text Below to your Environment Terminal
