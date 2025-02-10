@@ -6,8 +6,8 @@ from streamlit_option_menu import option_menu
 from matplotlib.colors import LinearSegmentedColormap
 
 # Import the All Different Pages
-# from scan_page import scanning_page
-# from premium_page import render_premium_page
+from scan_page import scanning_page
+from premium_page import render_premium_page
 
 # Set Up Login Variables
 premium_credentials = {
