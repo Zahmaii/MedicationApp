@@ -6,10 +6,6 @@ from streamlit_option_menu import option_menu
 from matplotlib.colors import LinearSegmentedColormap
 from streamlit_webrtc import webrtc_streamer  # Ensure this is imported for webcam streaming
 
-# Import the All Different Pages
-# from scan_page import scanning_page
-# from premium_page import render_premium_page
-
 # Load the dataset (adjust the path if needed)
 try:
     # Load dataset from CSV file
