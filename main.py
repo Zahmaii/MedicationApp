@@ -6,13 +6,36 @@ from streamlit_option_menu import option_menu
 from matplotlib.colors import LinearSegmentedColormap
 from streamlit_webrtc import webrtc_streamer  # Ensure this is imported for webcam streaming
 
+# Import the All Different Pages
+# from scan_page import scanning_page
+# from premium_page import render_premium_page
+    
 # Load the dataset (adjust the path if needed)
 try:
-    # Load dataset from CSV file
-    df = pd.read_csv('medications.csv')  # Path to your CSV file
+    df = pd.read_csv('medications.csv')  # Ensure correct path
 except Exception as e:
     st.error(f"Error loading the dataset: {e}")
     df = None
+
+# Function for searching medications
+def search_medication(med_name):
+    if df is not None and 'Drug Name' in df.columns:
+        return df[df['Drug Name'].str.contains(med_name, case=False, na=False)]
+    return pd.DataFrame()
+
+# Function to display medication details
+def display_medication_options(search_results):
+    if not search_results.empty:
+        selected_med = st.selectbox("Select the specific medication:", search_results['Drug Name'].unique(), key="med_select")
+        if selected_med:
+            specific_med = search_results[search_results['Drug Name'] == selected_med].iloc[0]
+            st.write(f"### Medication Name: {specific_med['Drug Name']}")
+            st.write(f"**Therapeutic Class:** {specific_med['Therapeutic Class']}")
+            st.write(f"**Description:** {specific_med['use0']}")
+            st.write(f"**Side Effects:** {specific_med['sideEffect0']}")
+            # st.write(f"**Active Ingredients:** {specific_med['Active Ingredients']}")
+    else:
+        st.write("No medication found.")
 
 # Set Up Login Variables
 premium_credentials = {
@@ -100,36 +123,12 @@ def render_page(selected):
 
             
         elif selected == "Search":
-            # scanning_page() # Calling Search Page
-            st.title("Search Page")
-            def search_medication(med_name):
-    if df is not None and 'name' in df.columns:
-        return df[df['name'].str.contains(med_name, case=False, na=False)]
-    return pd.DataFrame()
-
-# Function for selecting a specific medication
-def display_medication_options(search_results):
-    if not search_results.empty:
-        selected_med = st.selectbox("Select the specific medication:", search_results['name'].unique(), key="med_select")
-        if selected_med:
-            specific_med = search_results[search_results['name'] == selected_med].iloc[0]
-            side_effects = [specific_med[col] for col in df.columns if 'sideEffect' in col and not pd.isna(specific_med[col])][:3]
-            st.write(f"### Medication Name: {specific_med['name']}")
-            st.write(f"**Side Effects:** {', '.join(side_effects)}")
-    else:
-        st.write("No medication found.")
-
-# Page content rendering
-def render_page(selected):
-    if selected == "Scanning":
-        st.title("Scanning Page")
-        selected = option_menu(None, ["Scan", "Search"], icons=["camera", "search"], menu_icon="cast", default_index=0, orientation="horizontal")
-        if selected == "Search":
             st.title("Search Medication")
             search_query = st.text_input("Enter Medication Name:", key="search_query").strip()
             if search_query:
                 search_results = search_medication(search_query)
                 display_medication_options(search_results)
+
 
     elif selected == "Management":
         st.title("Management Page")
