@@ -8,7 +8,7 @@ from streamlit_webrtc import webrtc_streamer  # Ensure this is imported for webc
 
 # Load the datasets (adjust the paths if needed)
 try:
-    df1 = pd.read_csv('medications.csv')  # Original dataset
+    df1 = pd.read_csv('medications_1.csv')  # Original dataset
     df2 = pd.read_csv('medications_2.csv')  # New dataset
 except Exception as e:
     st.error(f"Error loading the datasets: {e}")
