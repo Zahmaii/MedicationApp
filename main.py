@@ -102,6 +102,34 @@ def render_page(selected):
         elif selected == "Search":
             # scanning_page() # Calling Search Page
             st.title("Search Page")
+            def search_medication(med_name):
+    if df is not None and 'name' in df.columns:
+        return df[df['name'].str.contains(med_name, case=False, na=False)]
+    return pd.DataFrame()
+
+# Function for selecting a specific medication
+def display_medication_options(search_results):
+    if not search_results.empty:
+        selected_med = st.selectbox("Select the specific medication:", search_results['name'].unique(), key="med_select")
+        if selected_med:
+            specific_med = search_results[search_results['name'] == selected_med].iloc[0]
+            side_effects = [specific_med[col] for col in df.columns if 'sideEffect' in col and not pd.isna(specific_med[col])][:3]
+            st.write(f"### Medication Name: {specific_med['name']}")
+            st.write(f"**Side Effects:** {', '.join(side_effects)}")
+    else:
+        st.write("No medication found.")
+
+# Page content rendering
+def render_page(selected):
+    if selected == "Scanning":
+        st.title("Scanning Page")
+        selected = option_menu(None, ["Scan", "Search"], icons=["camera", "search"], menu_icon="cast", default_index=0, orientation="horizontal")
+        if selected == "Search":
+            st.title("Search Medication")
+            search_query = st.text_input("Enter Medication Name:", key="search_query").strip()
+            if search_query:
+                search_results = search_medication(search_query)
+                display_medication_options(search_results)
 
     elif selected == "Management":
         st.title("Management Page")
