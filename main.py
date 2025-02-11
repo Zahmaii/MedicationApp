@@ -6,29 +6,42 @@ from streamlit_option_menu import option_menu
 from matplotlib.colors import LinearSegmentedColormap
 from streamlit_webrtc import webrtc_streamer  # Ensure this is imported for webcam streaming
 
-# Import the All Different Pages
-# from scan_page import scanning_page
-# from premium_page import render_premium_page
-    
-# Load the dataset (adjust the path if needed)
+# Load the datasets (adjust the paths if needed)
 try:
-    df = pd.read_csv('medications.csv')  # Ensure correct path
+    df1 = pd.read_csv('medications.csv')  # Original dataset
+    df2 = pd.read_csv('medications_2.csv')  # New dataset
 except Exception as e:
-    st.error(f"Error loading the dataset: {e}")
-    df = None
+    st.error(f"Error loading the datasets: {e}")
+    df1 = None
+    df2 = None
 
-# Function for searching medications
+# Function for searching medications in both datasets
 def search_medication(med_name):
-    if df is not None and 'Drug Name' in df.columns:
-        return df[df['Drug Name'].str.contains(med_name, case=False, na=False)]
-    return pd.DataFrame()
+    if df1 is not None and 'Drug Name' in df1.columns:
+        df1_results = df1[df1['Drug Name'].str.contains(med_name, case=False, na=False)]
+    else:
+        df1_results = pd.DataFrame()
+
+    if df2 is not None and 'Drug Name' in df2.columns:
+        df2_results = df2[df2['Drug Name'].str.contains(med_name, case=False, na=False)]
+    else:
+        df2_results = pd.DataFrame()
+
+    # Combine results from both datasets
+    combined_results = pd.concat([df1_results, df2_results]).drop_duplicates().reset_index(drop=True)
+    return combined_results
 
 # Function to display medication details
 def display_medication_options(search_results):
     if not search_results.empty:
         selected_med = st.selectbox("Select the specific medication:", search_results['Drug Name'].unique(), key="med_select")
         if selected_med:
-            specific_med = search_results[search_results['Drug Name'] == selected_med].iloc[0]
+            # Check which dataset the medication is in and display the details
+            if selected_med in df1['Drug Name'].values:
+                specific_med = df1[df1['Drug Name'] == selected_med].iloc[0]
+            else:
+                specific_med = df2[df2['Drug Name'] == selected_med].iloc[0]
+
             st.write(f"### Medication Name: {specific_med['Drug Name']}")
             st.write(f"**Therapeutic Class:** {specific_med['Therapeutic Class']}")
             st.write(f"**Description:** {specific_med['use0']}")
@@ -37,6 +50,25 @@ def display_medication_options(search_results):
     else:
         st.write("No medication found.")
 
+# Function to handle video frame callback (webcam feed processing)
+def video_frame_callback(frame):
+    # Convert frame to RGB
+    img = frame.to_image()
+    img = np.array(img)
+    
+    # Apply medication detection on the image
+    if df1 is not None:
+        detected_name = df1['Drug Name'].iloc[0]  # For now, return the first medication
+        
+        # Check if the detected name is in the second dataset as well
+        if detected_name in df2['Drug Name'].values:
+            st.write(f"### Detected Medication: {detected_name} (Found in both datasets)")
+        else:
+            st.write(f"### Detected Medication: {detected_name} (Found in first dataset only)")
+
+    # Convert image back to format streamlit_webrtc expects
+    return frame
+
 # Set Up Login Variables
 premium_credentials = {
     "prime": "primepass",
@@ -44,23 +76,6 @@ premium_credentials = {
 premium_plus_credentials = {
     "elite": "elitepass",
 }
-
-# Video frame callback to process the webcam feed and detect medication
-def video_frame_callback(frame):
-    # Convert frame to RGB
-    img = frame.to_image()
-    img = np.array(img)
-    
-    # Apply medication detection on the image
-    if df is not None:
-        detected_name = df['Drug Name'].iloc[0]  # Return the first medication for now
-
-        # Display the detected medication name below the image
-        if detected_name:
-            st.write(f"### Detected Medication: {detected_name}")
-
-    # Convert image back to format streamlit_webrtc expects
-    return frame
 
 # Function for checking credentials
 def check_credentials(username, password):
@@ -99,7 +114,7 @@ def render_page(selected):
             st.write("Use your camera to scan medication.")
             
             # Display the detected medication below the webcam feed
-            if df is not None:
+            if df1 is not None or df2 is not None:
                 # Use webcam stream with streamlit_webrtc
                 webrtc_ctx = webrtc_streamer(
                     key="example", 
@@ -113,15 +128,19 @@ def render_page(selected):
                     # Process a dummy frame for detection
                     detected_name = video_frame_callback(None)  # Simulate detection logic
                     if detected_name:
-                        medication_info = df[df['Drug Name'] == detected_name].iloc[0]
-                        st.write(f"### Medication Info:")
+                        # Make sure to check both datasets
+                        if detected_name in df1['Drug Name'].values:
+                            medication_info = df1[df1['Drug Name'] == detected_name].iloc[0]
+                        elif detected_name in df2['Drug Name'].values:
+                            medication_info = df2[df2['Drug Name'] == detected_name].iloc[0]
+
+                        st.write(f"### Medication Info: ")
                         st.write(f"**Drug Name**: {medication_info['Drug Name']}")
                         st.write(f"**Drug Class**: {medication_info['Drug Class']}")
                         st.write(f"**Description**: {medication_info['Description']}")
                         st.write(f"**Side Effects**: {medication_info['Side Effects']}")
                         st.write(f"**Active Ingredients**: {medication_info['Active Ingredients']}")
 
-            
         elif selected == "Search":
             st.title("Search Medication")
             search_query = st.text_input("Enter Medication Name:", key="search_query").strip()
