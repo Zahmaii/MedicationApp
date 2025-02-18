@@ -1,11 +1,13 @@
-pandas
-streamlit
-opencv-python
-matplotlib
 numpy
-pillow
-streamlit-webrtc
+pandas
+matplotlib
+streamlit
+datetime
+fpdf
 streamlit-option-menu
+matplotlib
+streamlit-webrtc
+tqdm
 
 # Download the Program Requirements File by
 # Copy and Paste the Text Below to your Environment Terminal
