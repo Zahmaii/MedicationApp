@@ -2,6 +2,11 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
+import datetime
+import tempfile
+import time
+from tqdm import tqdm
+from fpdf import FPDF
 from streamlit_option_menu import option_menu
 from matplotlib.colors import LinearSegmentedColormap
 from streamlit_webrtc import webrtc_streamer  # Ensure this is imported for webcam streaming
@@ -148,7 +153,6 @@ def render_page(selected):
                 search_results = search_medication(search_query)
                 display_medication_options(search_results)
 
-
     elif selected == "Management":
         st.title("Management Page")
         st.write("This is the management page.")
@@ -159,7 +163,48 @@ def render_page(selected):
 
     elif selected == "Delivery":
         st.title("Delivery Page")
-        st.write("This is the delivery page.")
+
+        # Order Form
+        with st.form("order_form"):
+            st.subheader("Place Your Order")
+            quantity = st.number_input("Quantity", min_value=1, step=1, value=1)
+            uploaded_file = st.file_uploader("Upload Prescription (PDF, JPG, PNG)", type=["pdf", "jpg", "png"])
+            submitted = st.form_submit_button("Place Order")
+
+        if submitted:
+            if uploaded_file:
+                st.write("Processing...")
+
+                progress_bar = st.progress(0)  # Initialize progress bar
+
+                for i in tqdm(range(100)):  
+                    time.sleep(0.03)  # Simulate processing time
+                    progress_bar.progress(i + 1)  # Update progress bar
+
+                st.write("Process Completed!")
+                st.write("-"*50)
+                total_cost = 10 * quantity
+                order_details = f"Order Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nItem: Medication\nQuantity: {quantity}\nTotal Cost: ${total_cost:.2f}"
+                order_summary = (f"**Total Cost: ${total_cost:.2f} For {quantity} Kg of Medication**")
+                st.session_state.order_summary = order_summary
+                if st.session_state.get("order_summary"):
+                    st.subheader("Order Summary")
+                    st.markdown(st.session_state.order_summary)
+                st.success("Order placed successfully!")
+                
+                # Generate PDF
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", size=12)
+                pdf.multi_cell(0, 10, "Order Receipt\n\n" + order_details)
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+                pdf.output(temp_file.name)
+
+                # Download button
+                with open(temp_file.name, "rb") as file:
+                    st.download_button("Download Receipt", file, "order_receipt.pdf", mime="application/pdf")
+            else:
+                st.error("Please upload a prescription to proceed.")
 
     elif selected == "Premium":
         # render_premium_page()  # Calling Premium Page File
@@ -205,41 +250,39 @@ def render_page(selected):
 
         # Prime Version
         st.write("-"*75)
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         col1.metric(label="Type of Premium", value="Prime")
-        col2.metric(label="Price", value="$10")
+        col2.metric(label="Price (Monthly)", value="$10")
+        col3.metric(label="Price (Yearly)", value="$100")
         st.write("### Features of Prime:")
         prime_features = [
-            "✔️ Access to basic AI tools",
-            "✔️ Limited cloud storage",
-            "✔️ Standard customer support",
-            "✔️ Monthly updates"
+            "✔️ History",
+            "✔️ Delivery"
         ]
         st.write("\n".join(prime_features))
-        st.markdown('<button class="premium-button">Purchase Prime</button>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # st.markdown('<button class="premium-button">Purchase Prime</button>', unsafe_allow_html=True)
+        # st.markdown('</div>', unsafe_allow_html=True)
 
         # Elite Version
         st.write("-"*75)
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         col1.metric(label="Type of Premium", value="Elite")
-        col2.metric(label="Price", value="$20")
+        col2.metric(label="Price (Monthly)", value="$20")
+        col3.metric(label="Price (Yearly)", value="$200")
         st.write("### Features of Elite:")
         elite_features = [
-            "🌟 Full access to all AI tools",
-            "🌟 Unlimited cloud storage",
-            "🌟 Priority customer support",
-            "🌟 Weekly exclusive updates",
-            "🌟 Advanced analytics dashboard"
+            "🌟 History",
+            "🌟 Schedule Delivery",
+            "🌟 Family Plan"
         ]
         st.write("\n".join(elite_features))
-        st.markdown('<button class="premium-button">Purchase Elite</button>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        # st.markdown('<button class="premium-button">Purchase Elite</button>', unsafe_allow_html=True)
+        # st.markdown('</div>', unsafe_allow_html=True)
 
         # Reminder for Premium Plus
         st.markdown("""
             <div style="font-size: 18px; text-align: center; color: #7F8C8D; margin-top: 40px;">
-                Upgrade to Premium Plus for the ultimate experience and exclusive benefits!
+                Upgrade to Elite for the ultimate experience and exclusive benefits!
             </div>
         """, unsafe_allow_html=True)
 
