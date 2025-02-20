@@ -8,7 +8,6 @@ tqdm
 fpdf
 streamlit-option-menu
 matplotlib
-streamlit-webrtc
 
 # Download the Program Requirements File by
 # Copy and Paste the Text Below to your Environment Terminal
