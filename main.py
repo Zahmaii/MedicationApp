@@ -5,6 +5,7 @@ import streamlit as st
 import datetime
 import tempfile
 import time
+import random
 from tqdm import tqdm
 from fpdf import FPDF
 from streamlit_option_menu import option_menu
@@ -46,12 +47,6 @@ def display_medication_options(search_results):
                 specific_med = df1[df1['Drug Name'] == selected_med].iloc[0]
             else:
                 specific_med = df2[df2['Drug Name'] == selected_med].iloc[0]
-
-            st.write(f"### Medication Name: {specific_med['Drug Name']}")
-            st.write(f"**Therapeutic Class:** {specific_med['Therapeutic Class']}")
-            st.write(f"**Description:** {specific_med['use0']}")
-            st.write(f"**Side Effects:** {specific_med['sideEffect0']}")
-            # st.write(f"**Active Ingredients:** {specific_med['Active Ingredients']}")
     else:
         st.write("No medication found.")
 
@@ -114,13 +109,9 @@ def render_page(selected):
             orientation="horizontal",
         )
         if selected == "Scan":
-            # scanning_page() # Calling Scanning Page
-            # Scanning Page Code
             st.write("Use your camera to scan medication.")
             
-            # Display the detected medication below the webcam feed
             if df1 is not None or df2 is not None:
-                # Use webcam stream with streamlit_webrtc
                 webrtc_ctx = webrtc_streamer(
                     key="example", 
                     video_frame_callback=video_frame_callback,
@@ -128,23 +119,23 @@ def render_page(selected):
                     video_html_attrs={"width": "100%"}
                 )
 
-                # Display the detected medication info below
                 if webrtc_ctx and webrtc_ctx.state.playing:
-                    # Process a dummy frame for detection
-                    detected_name = video_frame_callback(None)  # Simulate detection logic
+                    detected_name = video_frame_callback(None)  
                     if detected_name:
-                        # Make sure to check both datasets
                         if detected_name in df1['Drug Name'].values:
                             medication_info = df1[df1['Drug Name'] == detected_name].iloc[0]
                         elif detected_name in df2['Drug Name'].values:
                             medication_info = df2[df2['Drug Name'] == detected_name].iloc[0]
 
+                        st.session_state.searched_medication = medication_info  # Save scanned medication info
+
                         st.write(f"### Medication Info: ")
                         st.write(f"**Drug Name**: {medication_info['Drug Name']}")
-                        st.write(f"**Drug Class**: {medication_info['Drug Class']}")
-                        st.write(f"**Description**: {medication_info['Description']}")
-                        st.write(f"**Side Effects**: {medication_info['Side Effects']}")
-                        st.write(f"**Active Ingredients**: {medication_info['Active Ingredients']}")
+                        st.write(f"**Therapeutic Class**: {medication_info['Therapeutic Class']}")
+                        st.write(f"**Side Effects 1**: {medication_info['sideEffect0']}")
+                        st.write(f"**Side Effects 2**: {medication_info['sideEffect1']}")
+                        st.write(f"**Side Effects 3**: {medication_info['sideEffect2']}")
+                        st.write(f"**Description**: {medication_info['use0']}")
 
         elif selected == "Search":
             st.title("Search Medication")
@@ -152,51 +143,185 @@ def render_page(selected):
             if search_query:
                 search_results = search_medication(search_query)
                 display_medication_options(search_results)
+                
+                if not search_results.empty:
+                    medication_info = search_results.iloc[0]
+                    st.session_state.searched_medication = medication_info  # Save searched medication info
+                    
+                    st.write(f"### Medication Info: ")
+                    st.write(f"**Drug Name**: {medication_info['Drug Name']}")
+                    st.write(f"**Therapeutic Class**: {medication_info['Therapeutic Class']}")
+                    st.write(f"**Side Effects 1**: {medication_info['sideEffect0']}")
+                    st.write(f"**Side Effects 2**: {medication_info['sideEffect1']}")
+                    st.write(f"**Side Effects 3**: {medication_info['sideEffect2']}")
+                    st.write(f"**Description**: {medication_info['use0']}")
 
     elif selected == "Management":
-        st.title("Management Page")
-        st.write("This is the management page.")
+        st.title("Medication Management")
+        
+        if "searched_medication" in st.session_state and st.session_state["searched_medication"] is not None:
+            # If a medication has been searched, display its details
+            st.write(f"Managing: **{st.session_state.searched_medication['Drug Name']}**")
+            st.write("-"*50)
+            
+            st.subheader("Medication Inventory")
+            if "medication_inventory" not in st.session_state:
+                st.session_state.medication_inventory = []
+            
+            med_name = st.text_input("Medication Name:")
+            med_qty = st.number_input("Quantity Available:", min_value=0, step=1)
+            if st.button("Add Medication"):
+                st.session_state.medication_inventory.append({"name": med_name, "quantity": med_qty})
+                st.success(f"Added {med_name} to inventory.")
+            
+            if st.session_state.medication_inventory:
+                st.table(st.session_state.medication_inventory)
+            
+            st.write("-"*50)
+            st.subheader("Set Medication Reminder")
+            reminder_med = st.selectbox("Select Medication:", [m["name"] for m in st.session_state.medication_inventory])
+
+            # Input for first dose time and dose interval
+            first_dose_time = st.time_input("First Dose Time:")
+            dose_interval = st.number_input("Dose Interval (hours):", min_value=4, step=1)
+
+            # If dose interval is less than 4, display error and don't generate the table or chart
+            if dose_interval >= 4:
+                # Button to set reminder
+                if st.button("Set Reminder"):
+                    next_dose = datetime.datetime.combine(datetime.date.today(), first_dose_time) + datetime.timedelta(hours=dose_interval)
+                    
+                    # Save the reminder in session state
+                    if "medication_reminders" not in st.session_state:
+                        st.session_state["medication_reminders"] = []
+
+                    # Add the reminder to the list
+                    st.session_state["medication_reminders"].append({
+                        "medication": reminder_med,  # Ensure this key is consistent
+                        "first_dose_time": first_dose_time,
+                        "next_dose_time": next_dose.time()
+                    })
+
+                    # Display reminders in a table
+                    reminder_df = pd.DataFrame(st.session_state["medication_reminders"])
+                    st.table(reminder_df)
+
+                    # Add chart generation code here if needed (only after dose_interval check)
+                    # Example chart (optional):
+                    # st.line_chart(reminder_df["next_dose_time"])
+            else:
+                st.error("Please enter a dose interval of at least 4 hours.")
+        
+        else:
+            # If no medication is searched, just show the current time
+            st.write("No medication selected. Please scan or search for medication.")
+            
+            # Display current time
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            st.write(f"Current Time: {current_time}")
 
     elif selected == "History":
         st.title("History Page")
-        st.write("This is the history page.")
+        st.write("View past medication searches, reminders, and orders.")
+        
+        # Display previously searched medication
+        if "searched_medication" in st.session_state and st.session_state["searched_medication"] is not None:
+            st.write(f"Previously searched medication: **{st.session_state.searched_medication['Drug Name']}**")
+            st.write("-"*50)
+        else:
+            st.write("No medication has been searched yet.")
+        
+        # Display previously set reminders
+        if "medication_reminders" in st.session_state and st.session_state["medication_reminders"]:
+            st.subheader("Reminder History")
+            
+            for reminder in st.session_state["medication_reminders"]:
+                # Use .get() to avoid KeyError in case the key is missing
+                medication = reminder.get("medication", "N/A")
+                first_dose_time = reminder.get("first_dose_time", "N/A")
+                next_dose_time = reminder.get("next_dose_time", "N/A")
+
+                st.write(f"Medication: **{medication}** - First Dose: {first_dose_time} - Next Dose: {next_dose_time}")
+        else:
+            st.write("No reminders have been set yet.")
+        
+        # Display order history (if any)
+        if "order_history" in st.session_state and st.session_state["order_history"]:
+            st.write("-"*50)
+            st.subheader("Order History")
+            for order in st.session_state["order_history"]:
+                st.write(f"Order Date: {order['order_date']} - Item: {order['item']} - Quantity: {order['quantity']} - Total Cost: ${order['total_cost']:.2f}")
+        else:
+            st.write("No orders have been placed yet.")
 
     elif selected == "Delivery":
         st.title("Delivery Page")
 
+        # Automatically use the medication name from the scanned data if available
+        medication_name = ""
+        if "searched_medication" in st.session_state and st.session_state["searched_medication"] is not None:
+            medication_name = st.session_state.searched_medication['Drug Name']
+
         # Order Form
         with st.form("order_form"):
             st.subheader("Place Your Order")
+            st.write(f"Selected Medication: **{medication_name}**")
             quantity = st.number_input("Quantity", min_value=1, step=1, value=1)
             uploaded_file = st.file_uploader("Upload Prescription (PDF, JPG, PNG)", type=["pdf", "jpg", "png"])
             submitted = st.form_submit_button("Place Order")
 
         if submitted:
             if uploaded_file:
-                st.write("Processing...")
-
+                st.write("Processing Order...")
                 progress_bar = st.progress(0)  # Initialize progress bar
 
-                for i in tqdm(range(100)):  
+                for i in range(100):  
                     time.sleep(0.03)  # Simulate processing time
                     progress_bar.progress(i + 1)  # Update progress bar
 
                 st.write("Process Completed!")
                 st.write("-"*50)
-                total_cost = 10 * quantity
-                order_details = f"Order Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\nItem: Medication\nQuantity: {quantity}\nTotal Cost: ${total_cost:.2f}"
-                order_summary = (f"**Total Cost: ${total_cost:.2f} For {quantity} Kg of Medication**")
-                st.session_state.order_summary = order_summary
-                if st.session_state.get("order_summary"):
-                    st.subheader("Order Summary")
-                    st.markdown(st.session_state.order_summary)
+
+                # Random cost per unit (between 5 and 50)
+                cost_per_unit = random.randint(5, 50)
+                medication_cost = cost_per_unit * quantity  # Total cost for medication
+                delivery_cost = 5  # Fixed delivery cost
+                total_cost = medication_cost + delivery_cost  # Total cost
+                
+                st.markdown("**Order Summary**")
+                # Create order data for table
+                order_data = {
+                    "Name": [medication_name, "Delivery"],
+                    "Quantity": [quantity, "-"],  # Delivery doesn't have quantity
+                    "Cost per Unit": [f"${cost_per_unit:.2f}", "-"],  # Delivery cost doesn't have unit price
+                    "Delivery Cost": ["-", f"${delivery_cost:.2f}"],
+                    "Total Cost": [f"${medication_cost:.2f}", f"${total_cost:.2f}"]
+                }
+
+                # Display the order data as a table
+                order_df = pd.DataFrame(order_data)
+                st.table(order_df)
+
+                # Display total cost
+                st.write(f"**Total Cost: ${total_cost:.2f}**")
                 st.success("Order placed successfully!")
+
+                # Save order history in session state
+                if "order_history" not in st.session_state:
+                    st.session_state.order_history = []
+
+                st.session_state.order_history.append({
+                    "order_date": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    "item": "Medication",
+                    "quantity": quantity,
+                    "total_cost": total_cost
+                })
                 
                 # Generate PDF
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial", size=12)
-                pdf.multi_cell(0, 10, "Order Receipt\n\n" + order_details)
+                pdf.multi_cell(0, 10, "Order Receipt\n\n" + order_df.to_string(index=False))
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
                 pdf.output(temp_file.name)
 
@@ -252,8 +377,8 @@ def render_page(selected):
         st.write("-"*75)
         col1, col2, col3 = st.columns(3)
         col1.metric(label="Type of Premium", value="Prime")
-        col2.metric(label="Price (Monthly)", value="$10")
-        col3.metric(label="Price (Yearly)", value="$100")
+        col2.metric(label="Price (Monthly)", value="$15")
+        col3.metric(label="Price (Yearly)", value="$150")
         st.write("### Features of Prime:")
         prime_features = [
             "✔️ History",
@@ -285,11 +410,52 @@ def render_page(selected):
                 Upgrade to Elite for the ultimate experience and exclusive benefits!
             </div>
         """, unsafe_allow_html=True)
-
+        
     elif selected == "Family Plan":
-        st.title("Premium Plus Page")
-        # Separate Sections
-        st.subheader("-" * 75)
+        st.title("Family Plan")
+        st.write("Manage your family's medication tracking.")
+
+        # Initialize the family members list if not already initialized
+        if "family_members" not in st.session_state:
+            st.session_state.family_members = []
+
+        # Add family members if less than 5
+        if len(st.session_state.family_members) < 5:
+            with st.form("add_family_member"):
+                family_name = st.text_input("Family Member Name:")
+                family_age = st.number_input("Age:", min_value=0, step=1)
+                family_relation = st.text_input("Relationship:")
+                submitted = st.form_submit_button("Add Family Member")
+                if submitted:
+                    st.session_state.family_members.append({"Name": family_name, "Age": family_age, "Relationship": family_relation})
+                    st.success(f"Added {family_name} to the family plan.")
+        else:
+            st.error("You have reached the limit of 5 family members.")
+        
+        # Display family members in a table format
+        if st.session_state.family_members:
+            # Create a DataFrame for easier display
+            family_df = pd.DataFrame(st.session_state.family_members)
+
+            # Add a column for the delete emoji (🗑️)
+            family_df["Remove"] = family_df.apply(lambda x: "🗑️", axis=1)
+            
+            # Display the table with the delete button in the last column
+            for index, member in family_df.iterrows():
+                # Display each row with a delete button
+                cols = st.columns([3, 2, 2, 1])  # Adjust the column width as needed
+                
+                # Display family member info in columns
+                cols[0].write(f"**{member['Name']}**")
+                cols[1].write(f"Age: {member['Age']}")
+                cols[2].write(f"Relationship: {member['Relationship']}")
+                delete_button = cols[3].button("🗑️", key=f"remove_{index}")
+                
+                if delete_button:
+                    # Remove the selected family member from the session state
+                    st.session_state.family_members.pop(index)
+                    st.success(f"Removed {member['Name']} from the family plan.")
+                    st.rerun()  # Re-render the page after deletion
 
 # Sidebar Menu
 with st.sidebar:
