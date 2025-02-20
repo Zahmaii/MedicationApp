@@ -1,15 +1,12 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import streamlit as st
 import datetime
 import tempfile
 import time
 import random
-from tqdm import tqdm
 from fpdf import FPDF
 from streamlit_option_menu import option_menu
-from matplotlib.colors import LinearSegmentedColormap
 from streamlit_webrtc import webrtc_streamer  # Ensure this is imported for webcam streaming
 
 # Load the datasets (adjust the paths if needed)
