@@ -3,11 +3,12 @@ pandas
 matplotlib
 streamlit
 datetime
+tempfile
+tqdm
 fpdf
 streamlit-option-menu
 matplotlib
 streamlit-webrtc
-tqdm
 
 # Download the Program Requirements File by
 # Copy and Paste the Text Below to your Environment Terminal
